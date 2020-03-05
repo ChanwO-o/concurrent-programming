@@ -4,12 +4,28 @@
 
 #define BUFFERSIZE 8
 
+// buffer
 int buffer[BUFFERSIZE];
-pthread_t *producers;
-pthread_t *consumers;
+pthread_mutex_t lock; // mutex
+int in, out; // index of buffer for input/output
 
-void *thread(void *vargp) {
-	printf("thread()\n");
+// threads
+pthread_t producers[16];
+pthread_t consumers[16];
+
+// if buffer is full or mutex is locked
+// call mutex lock, start producing items
+// calls mutex unlock
+void *produce(void *vargp) {
+	int myid = (int) vargp;
+	printf("produce_id_%d\n", myid);
+	usleep( 1000 * 1000 ); // 1 second
+	return NULL;
+}
+
+void *consume(void *vargp) {
+	int myid = (int) vargp;
+	printf("consume_id_%d\n", myid);
 	usleep( 1000 * 1000 ); // 1 second
 	return NULL;
 }
@@ -21,23 +37,30 @@ void initializeBuffer() {
 }
 
 void initializeProducerThreads(int count) {
-	producers = (pthread_t *) malloc(sizeof(pthread_t) * count);
+	int i;
+	pthread_t tid = 0;
+	for (i = 0; i < count; ++i) {
+		pthread_create(&producers[i], NULL, produce, tid);
+		tid++;
+		// pthread_join(producers[i], NULL); // only call this when thread is ready to be executed
+	}
 }
 
 void initializeConsumerThreads(int count) {
-	consumers = (pthread_t *) malloc(sizeof(pthread_t) * count);
+	int i;
+	pthread_t tid = 100;
+	for (i = 0; i < count; ++i) {
+		pthread_create(&consumers[i], NULL, consume, tid);
+		tid++;
+		// pthread_join(producers[i], NULL); // only call this when thread is ready to be executed
+	}
 }
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char * argv[]) {
 	int producercount;
 	int consumercount;
 	int items;
 	int delay;
-	
-	// int lock;
-	// int currentThreadId;
-	// int isFull, isEmpty;
 	
 	if (argc != 5)
 		return 1;
@@ -60,10 +83,7 @@ int main(int argc, char * argv[])
 	initializeProducerThreads(producercount);
 	initializeConsumerThreads(consumercount);
 	
+	// pthread_join(producers[0], NULL); // only call this when thread is ready to be executed
 	
-	pthread_t tid;
-	pthread_create(&tid, NULL, thread, NULL);
-	pthread_join(tid, NULL);
-
-    return 0;
+	return 0;
 }
