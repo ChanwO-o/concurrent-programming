@@ -3,37 +3,92 @@
 #include <time.h>
 
 #define BUFFERSIZE 8
+#define INITBUFFERVALUE -1
 
 // buffer
 int buffer[BUFFERSIZE];
-pthread_mutex_t lock; // mutex
+pthread_cond_t isNotEmpty = PTHREAD_COND_INITIALIZER; // condition
+pthread_cond_t isNotFull = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; // mutex
 int in, out; // index of buffer for input/output
 
 // threads
 pthread_t producers[16];
 pthread_t consumers[16];
 
-// if buffer is full or mutex is locked
-// call mutex lock, start producing items
-// calls mutex unlock
+void printBuffer() {
+	int i;
+	for (i = 0; i < BUFFERSIZE; ++i) {
+		printf("%d: %d\n", i, buffer[i]);
+	}
+}
+
+int bufferIsFull() {
+	int i;
+	for (i = 0; i < BUFFERSIZE; ++i) {
+		if (buffer[i] == INITBUFFERVALUE)
+			return 0;
+	}
+	return 1;
+}
+
+int bufferIsEmpty() {
+	int i;
+	for (i = 0; i < BUFFERSIZE; ++i) {
+		if (buffer[i] != INITBUFFERVALUE)
+			return 0;
+	}
+	return 1;
+}
+
 void *produce(void *vargp) {
+	pthread_mutex_lock(&lock);
 	int myid = (int) vargp;
 	printf("produce_id_%d\n", myid);
+	
+	if (bufferIsFull())
+		pthread_cond_wait(&isNotFull, &lock);
+	
+	buffer[in] = 77;
+	in++;
+	if (in == BUFFERSIZE)
+		in = 0;
+	printBuffer();
+	
+	if (bufferIsEmpty() == 0)
+		pthread_cond_signal(&isNotEmpty);
+	
+	pthread_mutex_unlock(&lock);
 	usleep( 1000 * 1000 ); // 1 second
 	return NULL;
 }
 
 void *consume(void *vargp) {
+	pthread_mutex_lock(&lock);
 	int myid = (int) vargp;
 	printf("consume_id_%d\n", myid);
-	usleep( 1000 * 1000 ); // 1 second
+	
+	if (bufferIsEmpty())
+		pthread_cond_wait(&isNotEmpty, &lock);
+	
+	buffer[out] = INITBUFFERVALUE;
+	out++;
+	if (out == BUFFERSIZE)
+		out = 0;
+	printBuffer();
+	
+	if (bufferIsFull() == 0)
+		pthread_cond_signal(&isNotFull);
+	
+	pthread_mutex_unlock(&lock);
+	usleep( 1000 * 1000 );
 	return NULL;
 }
 
 void initializeBuffer() {
 	int i;
 	for (i = 0; i < BUFFERSIZE; ++i)
-		buffer[i] = 0;
+		buffer[i] = INITBUFFERVALUE;
 }
 
 void initializeProducerThreads(int count) {
