@@ -118,9 +118,17 @@ int main(int argc, char * argv[]) {
 		return 1;
 	
 	producercount = atoi(argv[1]);
+	if (producercount <= 0 || 16 < producercount)
+		return;
 	consumercount = atoi(argv[2]);
+	if (consumercount <= 0 || 16 < consumercount)
+		return;
 	items = atoi(argv[3]);
+	if (items < 0)
+		return;
 	delay = atoi(argv[4]);
+	if (delay != 0 && delay != 1)
+		return;
 	
 	initializeBuffer();
 	initializeProducerThreads(producercount);
