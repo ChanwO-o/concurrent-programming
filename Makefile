@@ -3,7 +3,7 @@ CC=gcc
 #Compile with: 
 #-g = debug
 #-m32 = 32bit x86 executable
-CFLAGS=-lpthread
+CFLAGS=-lpthread -g
 
 
 all: main
